@@ -1,84 +1,167 @@
-#include <stdio.h>
-#include <allegro5/allegro.h>
-#include<allegro5/allegro_primitives.h>
+ï»¿#include <allegro5/allegro.h>
+#include <allegro5\allegro_primitives.h>
+//#include <stdio.h>
+#include<allegro5/allegro_font.h>
+#include<allegro5/allegro_ttf.h>
+#include<iostream>
 #include<allegro5/allegro_audio.h>
 #include<allegro5/allegro_acodec.h>
-#include<iostream>
+//function declaration
+bool PixelCollision(int x1, int y1, int w1, int hl, int x2, int y2, int w2, int h2);
+
 using namespace std;
-const int PACSIZE = 20;
+
 const float FPS = 60;
-const int SCREEN_W = 570;
-const int SCREEN_H = 615;
-const int BOUNCER_SIZE = 60;
-enum dir {
-	UP, DOWN, LEFT, 
-	RIGHT
-};
-enum MYKEYS {
-	KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT
+const int SCREEN_W = 640;
+const int SCREEN_H = 480;
+const int paddle1_SIZE = 32;
+int score = 0;
+enum MYKEYS2 {
+	KEY_A, KEY_D
 };
 
-int wallCollide(int x, int y, int dir, int level[21][21]);
+class brick { //class definition
+private:
+	int xpos;
+	int ypos;
+	bool isdead;
+public:
+	void initbrick(int x, int y);
+	void drawbrick();
+	bool brickcollision(int ballx, int bally, int ballw, int ballh);
+	void kill();
+	bool dead(); //added by mo
+};
 
-int main(int argc, char **argv) {
-	ALLEGRO_TIMER *timer = NULL;
-	ALLEGRO_BITMAP *bouncer = NULL;
-	ALLEGRO_BITMAP *bouncer2 = NULL; 
+//
+int main() {
 	ALLEGRO_DISPLAY *display = NULL;
 	ALLEGRO_EVENT_QUEUE *event_queue = NULL;
-	ALLEGRO_BITMAP*wall = NULL;
-	//ALLEGRO_SAMPLE *sample = NULL;
+	ALLEGRO_TIMER *timer = NULL;
+	ALLEGRO_FONT *font = NULL;
+	ALLEGRO_BITMAP *paddle2 = NULL;
+	ALLEGRO_BITMAP *ball = NULL;
+	ALLEGRO_SAMPLE *sample = NULL;
 	ALLEGRO_SAMPLE *sample2 = NULL;
 	ALLEGRO_SAMPLE_INSTANCE *sample2Instance = NULL;
-	ALLEGRO_BITMAP*dots = NULL;
+
+	//instantiate (stamp) objects of class brick
+	brick b1;
+	brick b2;
+	brick b3;
+	brick b4;
+	brick b5;
+	brick b6;
+	brick b7;
+	brick b8;
+	brick b9;
+	brick b10;
+	brick b11;
+	brick b12;
+	brick b13;
+	brick b14;
+	brick b15;
+	brick b16;
+	brick b17;
+	brick b18;
+	brick b19;
+	brick b20;
+
+	//initialize (put data in)
+	b1.initbrick(500, 50);
+
+	b2.initbrick(400, 50);
+
+	b3.initbrick(300, 50);
+
+	b4.initbrick(200, 50);
+
+	b5.initbrick(100, 50);
+
+	b6.initbrick(500, 100);
+
+	b7.initbrick(400, 100);
+
+	b8.initbrick(300, 100);
+
+	b9.initbrick(200, 100);
+
+	b10.initbrick(100, 100);
+
+	b11.initbrick(500, 150);
+
+	b12.initbrick(400, 150);
+
+	b13.initbrick(300, 150);
+
+	b14.initbrick(200, 150);
+
+	b15.initbrick(100, 150);
+
+	b16.initbrick(500, 200);
+
+	b17.initbrick(400, 200);
+
+	b18.initbrick(300, 200);
+
+	b19.initbrick(200, 200);
+
+	b20.initbrick(100, 200);
 
 
-	cout << "FLEGIN" << endl;
-	int bouncer_x = 305 - BOUNCER_SIZE / 2;
-	int bouncer_y = 280 - BOUNCER_SIZE / 2;
-	float bouncer_dx = -4.0, bouncer_dy = 4.0;
+	//paddle starting points
+	float paddle2_x = SCREEN_W / 2;
+	float paddle2_y = SCREEN_H / 1.1 - paddle1_SIZE / 2.0;
 
-	float bouncer2_x = SCREEN_W / 4.0 - BOUNCER_SIZE / 2.0;
-	float bouncer2_y = SCREEN_H / 4.0 - BOUNCER_SIZE / 2.0;
-	float bouncer2_dx = -2.0, bouncer2_dy = 4.0;
+	float paddle2_dx = -8.0, paddle2_dy = 8.0;
 
-	bool key[4] = { false, false, false, false };
+	float ball_x = 200;
+	float ball_y = 300;
+	float ball_dx = -8.0, ball_dy = 8.0;
+
 	bool key2[4] = { false, false, false, false };
 	bool redraw = true;
 	bool doexit = false;
-	al_init();
+
+	//al_init();
+
 	al_install_keyboard();
 	al_init_primitives_addon();
+	al_init_font_addon();
+	al_init_ttf_addon();
 	al_install_audio();
 	al_init_acodec_addon();
-	
 	timer = al_create_timer(1.0 / FPS);
 	display = al_create_display(SCREEN_W, SCREEN_H);
+
+	font = al_load_ttf_font("cubic.ttf", 20, 0);
 	al_reserve_samples(2);
-	sample2 = al_load_sample("pac.wav");
-	//sample = al_load_sample("oof.wav");
+	sample2 = al_load_sample("8bit.wav");
+	sample = al_load_sample("oof.wav");
 
 	sample2Instance = al_create_sample_instance(sample2);
 	al_set_sample_instance_playmode(sample2Instance, ALLEGRO_PLAYMODE_LOOP);
 	al_attach_sample_instance_to_mixer(sample2Instance, al_get_default_mixer());
 	al_play_sample_instance(sample2Instance);
 
-	dots = al_create_bitmap(5, 5);
-	al_set_target_bitmap(dots);
-	al_clear_to_color(al_map_rgb(255, 255, 255));
-	//////////////////////
-	wall = al_create_bitmap(30, 30);////////////////////wall size
-	al_set_target_bitmap(wall);
-	al_clear_to_color(al_map_rgb(128, 0, 0));
-	/////////////////////////////////
-	bouncer = al_create_bitmap(BOUNCER_SIZE, BOUNCER_SIZE);
-	bouncer2 = al_create_bitmap(BOUNCER_SIZE, BOUNCER_SIZE);
+	sample2Instance = al_create_sample_instance(sample);
+	al_set_sample_instance_playmode(sample2Instance, ALLEGRO_PLAYMODE_ONCE);
+	al_attach_sample_instance_to_mixer(sample2Instance, al_get_default_mixer());
 
-	al_set_target_bitmap(bouncer);
-	al_clear_to_color(al_map_rgb(255, 255, 0));
-	al_set_target_bitmap(bouncer2);
+
+
+	paddle2 = al_create_bitmap(paddle1_SIZE, paddle1_SIZE);
+	ball = al_create_bitmap(15, 15);
+
+
+
+	al_set_target_bitmap(paddle2);
+	al_clear_to_color(al_map_rgb(255, 255, 255));
+
+	al_set_target_bitmap(ball);
 	al_clear_to_color(al_map_rgb(255, 255, 255));
 	al_set_target_bitmap(al_get_backbuffer(display));
+
 	event_queue = al_create_event_queue();
 
 	al_register_event_source(event_queue, al_get_display_event_source(display));
@@ -87,142 +170,261 @@ int main(int argc, char **argv) {
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_flip_display();
 	al_start_timer(timer);
-	int level[21][21] = {
-		1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,
-		1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-		1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,
-		1,0,0,0,0,0,1,0,0,1,1,1,1,1,0,0,1,1,1,0,1,
-		1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,1,
-		1,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-		1,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,1,0,0,1,
-		1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,1,0,0,1,
-		1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,1,
-		1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,1,0,0,0,1,
-		1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,1,
-		1,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,1,1,0,1,
-		1,0,0,1,0,0,0,0,0,1,1,1,1,1,0,0,1,0,0,0,1,
-		1,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,
-		1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,1,0,1,0,1,
-		1,0,0,1,1,1,1,0,0,1,1,1,1,1,0,0,1,1,1,0,1,
-		1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,
-		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-		1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1, };
-	for (int i = 0; i < 21; i++) {
-		for (int j = 0; j < 21; j++)
-			cout << level[i][j];
-		cout << endl;
-
-	}
 
 
-	while (!doexit)
-	{
+	while (!doexit) {//game loop
+
 		ALLEGRO_EVENT ev;
 		al_wait_for_event(event_queue, &ev);
-		if (ev.type == ALLEGRO_EVENT_TIMER) {
 
-			if (key[KEY_UP] && bouncer_y >= 4.0) {
-				bouncer_y -= 4.0;
-			}
+		//physics engine
+		if (ev.type == ALLEGRO_EVENT_TIMER) {//note from mo: this was in the wrong place... all physics should be *inside* the timer section
 
-			if (key[KEY_DOWN] && bouncer_y <= SCREEN_H - BOUNCER_SIZE - 4.0) {
-				bouncer_y += 4.0;
-			}
 
-			//go right
-			
-			if (key[KEY_RIGHT] && bouncer_x <= SCREEN_W - BOUNCER_SIZE - 4.0) {
-				bouncer_x += 4.0;
+			if (ball_x < 0 || ball_x > 640 - 10) { //has ball hit left or right wall
+				ball_dx = -ball_dx;//flip direction
+
 			}
 
-			if (key[KEY_LEFT] && bouncer_x > 4) {
-				bouncer_x -= 4.0;
+
+			if (ball_y < 0 || ball_y > 480 - 10) {//has ball hit top or bottom wall
+				ball_dy = -ball_dy; //flip direction
 			}
-			if (level[bouncer_x / 30][bouncer_y / 30] == 0) {
-				level[bouncer_x / 30][bouncer_y / 30] = 2;
+			//add the x velocity to the x position, 
+			//and the y velocity to the y position
+			ball_x += ball_dx;
+			ball_y += ball_dy;
+
+
+
+			//note from mo: timer section was here, moved up above
+
+
+			//paddle movement and speed
+			if (key2[KEY_A]) {
+				paddle2_x -= 12.0;
 			}
+
+			if (key2[KEY_D]) {
+				paddle2_x += 12.0;
+			}
+
+
+
 			redraw = true;
-		}
-		else if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
-			break;
-		}
-		else if (ev.type == ALLEGRO_EVENT_KEY_DOWN) {
-			switch (ev.keyboard.keycode) {
 
+			//collide ball with paddle
+			if (PixelCollision(ball_x, ball_y, 15, 15, paddle2_x, paddle2_y, 100, 30)) {
+				cout << "collision!";
+				al_play_sample_instance(sample2Instance);
+				//ball_dx = -ball_dx;//reflection
+				ball_dy = -ball_dy;
+			}
 
-			case ALLEGRO_KEY_UP:
-				key[KEY_UP] = true;
-				break;
+			//do this for all yo bricks
+			if (b1.dead() == false && b1.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b1.kill();
 
-			case ALLEGRO_KEY_DOWN:
-				key[KEY_DOWN] = true;
-				break;
+			}
+			if (b2.dead() == false && b2.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b2.kill();
 
-			case ALLEGRO_KEY_LEFT:
-				key[KEY_LEFT] = true;
-				break;
+			}
+			if (b3.dead() == false && b3.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b3.kill();
 
-			case ALLEGRO_KEY_RIGHT:
-				key[KEY_RIGHT] = true;
-				break;
+			}
+			if (b4.dead() == false && b4.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b4.kill();
+
+			}
+			if (b5.dead() == false && b5.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b5.kill();
+
+			}
+			if (b6.dead() == false && b6.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b6.kill();
+
+			}
+			if (b7.dead() == false && b7.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b7.kill();
+			}
+			if (b8.dead() == false && b8.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b8.kill();
+			}
+			if (b9.dead() == false && b9.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b9.kill();
+			}
+			if (b10.dead() == false && b10.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b10.kill();
+			}
+			if (b11.dead() == false && b11.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b11.kill();
+
+			}
+			if (b12.dead() == false && b12.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b12.kill();
+
+			}
+			if (b13.dead() == false && b13.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b13.kill();
+
+			}
+			if (b14.dead() == false && b14.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b14.kill();
+
+			}
+			if (b15.dead() == false && b15.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b15.kill();
+
+			}
+			if (b16.dead() == false && b16.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b16.kill();
+
+			}
+			if (b17.dead() == false && b17.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b17.kill();
+			}
+			if (b18.dead() == false && b18.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b18.kill();
+			}
+			if (b19.dead() == false && b18.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b19.kill();
+			}
+			if (b20.dead() == false && b20.brickcollision(ball_x, ball_y, 32, 32) == true) {//changed to == from =
+				ball_dy = -ball_dy;
+				//ball_dx = -ball_dx;
+				b20.kill();
 			}
 		}
-		else if (ev.type == ALLEGRO_EVENT_KEY_UP) {
+		else if (ev.type == ALLEGRO_EVENT_KEY_DOWN) { //you've pressed a key
 			switch (ev.keyboard.keycode) {
+			case ALLEGRO_KEY_A:
+				key2[KEY_A] = true;
+
+				break;
+
+			case ALLEGRO_KEY_D:
+				key2[KEY_D] = true;
+				break;
+
+			}
+		}
+		else if (ev.type == ALLEGRO_EVENT_KEY_UP) { //you've let go of a key
+			switch (ev.keyboard.keycode) {
+			case ALLEGRO_KEY_A:
+				key2[KEY_A] = false;
+				break;
+
+			case ALLEGRO_KEY_D:
+				key2[KEY_D] = false;
+				break;
 
 
 			case ALLEGRO_KEY_ESCAPE:
 				doexit = true;
 				break;
 
-			case ALLEGRO_KEY_UP:
-				key[KEY_UP] = false;
-				break;
 
-			case ALLEGRO_KEY_DOWN:
-				key[KEY_DOWN] = false;
-				break;
-
-			case ALLEGRO_KEY_LEFT:
-				key[KEY_LEFT] = false;
-				break;
-
-			case ALLEGRO_KEY_RIGHT:
-				key[KEY_RIGHT] = false;
-				break;
-
-				/*case ALLEGRO_KEY_ESCAPE:
-				doexit = true;
-				break;*/
 			}
 		}
-
-
-
-
 		//render section//////////////////////////////////////////////////////////////////////////////
 		if (redraw && al_is_event_queue_empty(event_queue)) {
 			redraw = false;
 
+			//clears off screen
+
 			al_clear_to_color(al_map_rgb(0, 0, 0));
 
-			al_draw_filled_circle(bouncer_x, bouncer_y, 15, al_map_rgb(255, 255, 0));
+
+			al_draw_filled_rectangle(paddle2_x, paddle2_y, paddle2_x + 100, paddle2_y + 30, al_map_rgb(255, 255, 255));
+			al_draw_bitmap(ball, ball_x, ball_y, 0);
 
 
-			for (int i = 0; i < 21; i++)
-				for (int j = 0; j < 21; j++) {
-					if (level[i][j] == 1)
-						al_draw_bitmap(wall, i * 30, j * 30, 0);
-					if (level[i][j] == 0)
-						al_draw_bitmap(dots, i * 30+10, j * 30+10, 0);
 
-				}
+			if (b1.dead() == false)
+				b1.drawbrick();
+			if (b2.dead() == false)
+				b2.drawbrick();
+			if (b3.dead() == false)
+				b3.drawbrick();
+			if (b4.dead() == false)
+				b4.drawbrick();
+			if (b5.dead() == false)
+				b5.drawbrick();
+			if (b6.dead() == false)
+				b6.drawbrick();
+			if (b7.dead() == false)
+				b7.drawbrick();
+			if (b8.dead() == false)
+				b8.drawbrick();
+			if (b9.dead() == false)
+				b9.drawbrick();
+			if (b10.dead() == false)
+				b10.drawbrick();
+			if (b11.dead() == false)
+				b11.drawbrick();
+			if (b12.dead() == false)
+				b12.drawbrick();
+			if (b13.dead() == false)
+				b13.drawbrick();
+			if (b14.dead() == false)
+				b14.drawbrick();
+			if (b15.dead() == false)
+				b15.drawbrick();
+			if (b16.dead() == false)
+				b16.drawbrick();
+			if (b17.dead() == false)
+				b17.drawbrick();
+			if (b18.dead() == false)
+				b18.drawbrick();
+			if (b19.dead() == false)
+				b19.drawbrick();
+			if (b20.dead() == false)
+				b20.drawbrick();
 			al_flip_display();
-		}
-	}
-
-
-	al_destroy_bitmap(bouncer);
+		}//end render section
+	}//end game loop
+	al_destroy_bitmap(paddle2);
+	al_destroy_bitmap(ball);
 	al_destroy_timer(timer);
 	al_destroy_display(display);
 	al_destroy_event_queue(event_queue);
@@ -230,84 +432,46 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
+//function definition
+bool PixelCollision(int x1, int y1, int w1, int hl, int x2, int y2, int w2, int h2) {
 
-bool pixelCollision(int x1, int y1, int x2, int y2) {
+	if ((x1 + w1 > x2) && (x2 + w2 > x1) && (y2 + h2 > y1) && (y1 + hl > y2))
 
-	if (pixelCollision(x1, y1, x2, y2) == true);
-	/*if (key[3] && !wallCollide(bouncer_x, bouncer_y, RIGHT, wall)) {
-		bouncer_x += 4.0;
-	}*/
-	return false;
+		return true;
 
+	else
+		return false;
+}
+void brick::drawbrick() {
+	al_draw_rectangle(xpos, ypos, xpos + 100, ypos + 20, al_map_rgb(rand(), rand(), rand()), 5);
+}
+
+void brick::initbrick(int x, int y) {
+
+	xpos = x;
+	ypos = y;
+	isdead = false;
+}
+bool brick::brickcollision(int ballx, int bally, int ballw, int ballh) {
+
+	if ((xpos + 100 > ballx) && (ballx + 32 > xpos) && (bally + 32 > ypos) && (ypos + 32 > bally))
+
+		return true;
+
+	else
+		return false;
+}
+
+//added by mo
+bool brick::dead() {
+
+	return isdead;
+
+}
+
+void  brick::kill() {
+
+	isdead = true;
 
 
 }
-int wallCollide(int x, int y, int dir, int level[21][21]) {
-	int x1;
-	int x2;
-	int x3;
-	int y1;
-	int y2;
-	int y3;
-	if (dir == RIGHT) { 		// Moving Right
-								// Check along the far right side of the sprite, plus 3 (the amount we’re moving)
-		x1 = x + 5 + PACSIZE;
-		x2 = x + 5 + PACSIZE;
-		x3 = x + 5 + PACSIZE;
-		// Check at three point along that edge
-		y1 = y;
-		y2 = y +PACSIZE / 2;
-		y3 = y +PACSIZE;
-		if ((level[x1 / 30][y1 / 30] == 1) || (level[x2 / 30][y2 / 30] == 1) || (level[x3 / 30][y3 / 30] == 1)) {
-	}
-		cout << "right collision" << endl;
-		return 1;
-
-	}
-	else {
-		return 0;
-
-	}
-	if (dir == LEFT) { 		// Moving Right
-								// Check along the far right side of the sprite, plus 3 (the amount we’re moving)
-		x1 = x - 3;
-		x2 = x - 3;
-		x3 = x - 3;
-		y1 = y;
-		y2 = y + PACSIZE / 2;
-		y3 = y + PACSIZE;
-	}
-	if ((level[x1 / 30][y1 / 30] == 1) || (level[x2 / 30][y2 / 30] == 1) || (level[x3 / 30][y3 / 30] == 1)) {
-	}
-	else {
-		return 0;
-	}
-	if (dir == UP) { 		// Moving Right
-							// Check along the far right side of the sprite, plus 3 (the amount we’re moving)
-		x1 = x;
-		x2 = x + PACSIZE / 2;
-		x3 = x + PACSIZE;
-		y1 = y - 5;
-		y2 = y - 5;
-		y3 = y - 5;
-	}
-	if ((level[x1 / 30][y1 / 30] == 1) || (level[x2 / 30][y2 / 30] == 1) || (level[x3 / 30][y3 / 30] == 1)) {
-	}
-	else {
-		return 0;
-	}
-	if (dir == DOWN) { 		// Moving Right
-		x1 = x;
-		x2 = x + PACSIZE / 2;
-		x3 = x + PACSIZE;
-		y1 = y + PACSIZE + 5;
-		y2 = y + PACSIZE + 5;
-		y3 = y + PACSIZE + 5;
-	}
-	if ((level[x1 / 30][y1 / 30] == 1) || (level[x2 / 30][y2 / 30] == 1) || (level[x3 / 30][y3 / 30] == 1)) {
-	}
-	else {
-		return 0;
-	}
-}
- 
