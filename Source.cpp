@@ -1,293 +1,210 @@
-#include<allegro5\allegro.h>
-#include <allegro5/allegro_image.h>
-#include <allegro5/allegro_primitives.h>
-#include <allegro5/allegro_font.h>
-#include <allegro5/allegro_ttf.h>
-#include <iostream>
+#include <stdio.h>
+#include <allegro5/allegro.h>
+#include <allegro5\allegro_image.h>
+#include<iostream>
 using namespace std;
 
-//GLOBALS and constants
-const int WIDTH = 720;
-const int HEIGHT = 720;
-bool keys[] = { false, false, false, false, false, false, false, false };
-enum KEYS { UP, DOWN, LEFT, RIGHT, W, S, A, D };
 
+const float FPS = 60;
+const int SCREEN_W = 900;
+const int SCREEN_H = 500;
+const int BOUNCER_SIZE = 32;
+int worldWidth = 4128;
+int worldHeight = 3754;
+int cameraX = 0;
+int cameraY = 0;
+enum MYKEYS {
+	KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT
+};
 
-int main(void)
+int main(int argc, char **argv)
 {
-	//game variables
-	bool done = false;
-	bool render = false;
-
-	//allegro variables
 	ALLEGRO_DISPLAY *display = NULL;
 	ALLEGRO_EVENT_QUEUE *event_queue = NULL;
-	ALLEGRO_TIMER *timer;
-	ALLEGRO_BITMAP *square = NULL;
-	ALLEGRO_BITMAP *square2 = NULL;
+	ALLEGRO_TIMER *timer = NULL;
+	ALLEGRO_BITMAP *bouncer = NULL;
+	ALLEGRO_BITMAP *map = NULL;
+	//float bouncer_x = SCREEN_W / 2.0 - BOUNCER_SIZE / 2.0;
+	//float bouncer_y = SCREEN_H / 2.0 - BOUNCER_SIZE / 2.0;
 
-	//player vaiables
-	float square_x = 50;
-	float square_y = 50;
-	float dx = 0;
-	float dy = 0;
+	float bouncer_x = 2606 + SCREEN_W;
+	float bouncer_y = 574 + SCREEN_W;
 
-	float square2_x = 100;
-	float square2_y = 50;
-	float dx2 = 0;
-	float dy2 = 0;
-	// to keep track if the player can jump again so he doesn't perform another jump midair
-	bool mayJumpAgain = false;
-	bool mayJumpAgain2 = false;
-
-	// is true if the player is on the ground
-	bool isOnSolidGround = false;
-	bool isOnSolidGround2 = false;
+	bool key[4] = { false, false, false, false };
+	bool redraw = true;
+	bool doexit = false;
+	bool onEdge = false;
 
 
-
-	//program setup
 	al_init();
-	al_install_keyboard();
+
 	al_init_image_addon();
-	al_init_font_addon();
-	al_init_ttf_addon();
-	al_init_primitives_addon();
 
-	//set up player
-	square = al_create_bitmap(32, 32);
-	al_set_target_bitmap(square);
-	al_clear_to_color(al_map_rgb(255, 255, 255));
+	al_install_keyboard();
+	map = al_load_bitmap("ff1.png");
 
-	square2 = al_create_bitmap(32, 32);
-	al_set_target_bitmap(square2);
-	al_clear_to_color(al_map_rgb(255, 255, 255));
+	timer = al_create_timer(1.0 / FPS);
 
 
-	//set up game stuff: display, event queue, timer, etc.
-	display = al_create_display(WIDTH, HEIGHT);
+	display = al_create_display(SCREEN_W, SCREEN_H);
 
-	event_queue = al_create_event_queue();
-	timer = al_create_timer(1.0 / 60);
 
-	al_register_event_source(event_queue, al_get_timer_event_source(timer));
-	al_register_event_source(event_queue, al_get_keyboard_event_source());
+	bouncer = al_create_bitmap(BOUNCER_SIZE, BOUNCER_SIZE);
+
+
+	al_set_target_bitmap(bouncer);
+
+	al_clear_to_color(al_map_rgb(255, 0, 255));
 
 	al_set_target_bitmap(al_get_backbuffer(display));
+
+	event_queue = al_create_event_queue();
+
+
 	al_register_event_source(event_queue, al_get_display_event_source(display));
+
 	al_register_event_source(event_queue, al_get_timer_event_source(timer));
+
+	al_register_event_source(event_queue, al_get_keyboard_event_source());
+
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	al_flip_display();
 
 	al_start_timer(timer);
 
-	//GAME LOOP
-	while (!done)
+	while (!doexit)
 	{
-
 		ALLEGRO_EVENT ev;
 		al_wait_for_event(event_queue, &ev);
 
+		if (ev.type == ALLEGRO_EVENT_TIMER) {
 
-		//Keyboard Section////////////////////////////////////////////////////////////////
-		if (ev.type == ALLEGRO_EVENT_KEY_DOWN)
+			cameraX = bouncer_x - SCREEN_W / 2;
+			cameraY = bouncer_y - SCREEN_H / 2;
 
-		{
-			cout << "key pressed";
-			switch (ev.keyboard.keycode)
-			{
-			case ALLEGRO_KEY_ESCAPE:
-				done = true;
-				break;
-			case ALLEGRO_KEY_LEFT:
-				keys[LEFT] = true;
-				break;
-			case ALLEGRO_KEY_RIGHT:
-				keys[RIGHT] = true;
-				break;
-			case ALLEGRO_KEY_UP:
-				keys[UP] = true;
-				break;
-			case ALLEGRO_KEY_DOWN:
-				keys[DOWN] = true;
-				break;
-
-			case ALLEGRO_KEY_W:
-				keys[W] = true;
-				break;
-			case ALLEGRO_KEY_S:
-				keys[S] = true;
-				break;
-			case ALLEGRO_KEY_A:
-				keys[A] = true;
-				break;
-			case ALLEGRO_KEY_D:
-				keys[D] = true;
-				break;
-
+			if (key[KEY_UP] && bouncer_y < worldHeight + 32) {
+				bouncer_y -= 4.0;
 			}
-		}
-		else if (ev.type == ALLEGRO_EVENT_KEY_UP)
-		{
-			switch (ev.keyboard.keycode)
-			{
-			case ALLEGRO_KEY_ESCAPE:
-				done = true;
-				break;
-			case ALLEGRO_KEY_LEFT:
-				keys[LEFT] = false;
-				break;
-			case ALLEGRO_KEY_RIGHT:
-				keys[RIGHT] = false;
-				break;
-			case ALLEGRO_KEY_UP:
-				keys[UP] = false;
-				break;
-			case ALLEGRO_KEY_DOWN:
-				keys[DOWN] = false;
-				break;
 
-			case ALLEGRO_KEY_W:
-				keys[W] = false;
-				break;
-			case ALLEGRO_KEY_A:
-				keys[A] = false;
-				break;
-			case ALLEGRO_KEY_S:
-				keys[S] = false;
-				break;
-			case ALLEGRO_KEY_D:
-				keys[D] = false;
-				break;
-
-
+			if (key[KEY_DOWN] && bouncer_y < worldHeight - 32) {
+				bouncer_y += 4.0;
 			}
-		}
-		//TIMER SECTION/////////////////////////////////////////////////////////////////////////////////
-		else if (ev.type == ALLEGRO_EVENT_TIMER)
-		{
-			cout << "may jump is " << mayJumpAgain << ", solid ground is " << isOnSolidGround << endl;
-			//player movement
 
-
-			//stop falling when you hit the bottom.
-			//ADD CODE: if player goes below the bottom of the screen, 
-			//reset his position so he's standing on the bottom of the screen, 
-			//set isOnSolidGround true
-			//and set y velocity to 0
-			//otherwise, isOnsolidGround is false.
-			if (square_y+32 > HEIGHT) {
-				square_y = HEIGHT-32;
-				isOnSolidGround = true;
-				dy = 0;
-
+			if (key[KEY_LEFT] && bouncer_x < worldWidth - 32) {
+				bouncer_x -= 4.0;
 			}
-			else
-				isOnSolidGround = false;
 
-			if (square2_y + 32 > HEIGHT) {
-				square2_y = HEIGHT - 32;
-				isOnSolidGround2 = true;
-				dy2 = 0;
-
+			if (key[KEY_RIGHT] && bouncer_x < worldWidth - 32) {
+				bouncer_x += 4.0;
 			}
-			else
-				isOnSolidGround2 = false;
-			//here's my check to stop my square from walking off the window (left, right, and top sides)
-			if (square_x > WIDTH - 30)
-				square_x = WIDTH - 30;
-			if (square_x < 0)
-				square_x = 0;
-			if (square_y < 0)
-				square_y = 0;
 
-			if (square2_x > WIDTH - 30)
-				square2_x = WIDTH - 30;
-			if (square2_x < 0)
-				square2_x = 0;
-			if (square2_y < 0)
-				square2_y = 0;
-
-			//JUMPING
-			//if the up button is pressed
-
-			//ADD CODE
-			//if the up button has been pressed AND the mayJumpAgain is true AND the //player is on solid ground, set y velocity to some nonzero number and //mayJumpAgain to false.
-			//otherwise, set mayJumpagain to true
-
-
+			redraw = true;
+			cout << "onedge is " << onEdge << endl;
 			//left
-			if (keys[UP] && mayJumpAgain == true && isOnSolidGround == true) {
-				dy = -15;
-				mayJumpAgain = false;
+			if (cameraX < 0) {
+				cameraX = 0;
+				onEdge = true; 
 			}
 			else 
-				mayJumpAgain = true;
-			if (keys[LEFT]) {
-				square_x -= 4.0;
-			}
-			//right
-			if (keys[RIGHT]) {
-				square_x += 4.0;
-			}
-//////////////////////////////////////////////////////////////////////////////////////////
-			if (keys[W] && mayJumpAgain2 == true && isOnSolidGround2 == true) {
-				dy2 = -15;
-				mayJumpAgain2 = false;
+				onEdge = false;
+
+
+			//top
+			if (cameraY < 0) {
+				cameraY = 0;
+				onEdge = true;
 			}
 			else
-				mayJumpAgain2 = true;
-			if (keys[A]) {
-				square2_x -= 4.0;
-			}
+				onEdge = false;
+
+
 			//right
-			if (keys[D]) {
-				square2_x += 4.0;
+			if (cameraX > worldWidth - SCREEN_W) { 
+				cameraX = worldWidth - SCREEN_W;
+				onEdge = true;
+			}
+			else
+				onEdge = false;
+
+			//bottom
+			if (cameraY > worldHeight - SCREEN_H) {
+				cameraY = worldHeight - SCREEN_H;
+				onEdge = true;
+			}
+			else
+				onEdge = false;
 			}
 
+			else if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+				break;
+			}
+			else if (ev.type == ALLEGRO_EVENT_KEY_DOWN) {
+				switch (ev.keyboard.keycode) {
+				case ALLEGRO_KEY_UP:
+					key[KEY_UP] = true;
+					break;
 
-			//gravity
-			//if we're not on solid ground, we should be falling (remember, positive y is "down")
+				case ALLEGRO_KEY_DOWN:
+					key[KEY_DOWN] = true;
+					break;
 
-			//ADD CODE: if you're not on solid ground, increase y velocity by 1.
-			if (isOnSolidGround == false)
-				dy++;
-			if (isOnSolidGround2 == false)
-				dy2++;
-			//ADD CODE: if your y velocity goes higher than 8, reset it to 8.
-			if (dy > 8)
-				dy = 8;
+				case ALLEGRO_KEY_LEFT:
+					key[KEY_LEFT] = true;
+					break;
 
-			if (dy2 > 8)
-				dy2 = 8;
+				case ALLEGRO_KEY_RIGHT:
+					key[KEY_RIGHT] = true;
+					break;
+				}
+			}
+			else if (ev.type == ALLEGRO_EVENT_KEY_UP) {
+				switch (ev.keyboard.keycode) {
+				case ALLEGRO_KEY_UP:
+					key[KEY_UP] = false;
+					break;
+
+				case ALLEGRO_KEY_DOWN:
+					key[KEY_DOWN] = false;
+					break;
+
+				case ALLEGRO_KEY_LEFT:
+					key[KEY_LEFT] = false;
+					break;
+
+				case ALLEGRO_KEY_RIGHT:
+					key[KEY_RIGHT] = false;
+					break;
+
+				case ALLEGRO_KEY_ESCAPE:
+					doexit = true;
+					break;
+				}
+			}
+
+			if (redraw && al_is_event_queue_empty(event_queue)) {
+				redraw = false;
+
+				al_clear_to_color(al_map_rgb(0, 0, 0));
+
+				//this draws your map
+				al_draw_bitmap(map, -cameraX, -cameraY, 0);
+
+				//if you're not on the edge, draw the player in the middle!
+			if (onEdge == false)
+				al_draw_bitmap(bouncer, SCREEN_W / 2, SCREEN_H / 2, 0);
+			else//otherwise let him move!
+				al_draw_bitmap(bouncer, bouncer_x - cameraX, bouncer_y - cameraY, 0);
 
 
-
-
-			render = true;
+				al_flip_display();
+			}
 		}
 
-		//here's where your box's coordinates are acutally updated
-		square_x += dx; //adding the component velocities to the actual positions
-		square_y += dy;
-		cout << "dy is " << dy << " , square_y is " << square_y << endl;
+		al_destroy_bitmap(bouncer);
+		al_destroy_timer(timer);
+		al_destroy_display(display);
+		al_destroy_event_queue(event_queue);
 
-		square2_x += dx2; //adding the component velocities to the actual positions
-		square2_y += dy2;
-		cout << "dy is " << dy << " , square_y is " << square2_y << endl;
-		//RENDER SECTION//////////////////////////////////////////////////////////////////////
-		if (render && al_is_event_queue_empty(event_queue))
-		{
-			render = false;
-
-			al_draw_bitmap(square, square_x, square_y, 0);
-			al_draw_bitmap(square2, square2_x, square2_y, 0);
-
-			al_flip_display();
-			al_clear_to_color(al_map_rgb(0, 0, 0));
-		}
-	}//end game loop
-
-	al_destroy_event_queue(event_queue);
-	al_destroy_display(display);
-
-	return 0;
-}
+		return 0;
+	}
